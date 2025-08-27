@@ -21,12 +21,6 @@ I’ll also try to experiment with custom rules (Sigma/YARA) and eventually add 
 - /configs    → SIEM config files and detection rules
 - /scripts    → Python helpers and enrichment scripts
 
-## Plan
-- Day 1–2: get Wazuh running and send logs from Windows + Kali
-- Day 3–4: simulate brute force and port scans, write detections
-- Day 5: document with a proper incident report PDF
-- After that: maybe expand with IDS and AI-based alert summaries
-
 ## Disclaimer
 Everything here is done in a *controlled lab setup*.  
 Please don’t use these attack techniques against any system you don’t own or have permission to test.
