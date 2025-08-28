@@ -1,26 +1,47 @@
 # AI-Enhanced SIEM & Network Threat Detection
 
 ## Overview
-In this project I’m building a lab where I use *Wazuh + ELK* as a SIEM to collect logs and detect network-based threats.  
-The idea is to simulate real-world attacks (like brute force logins, port scans, and maybe SQL injection) and show how they get detected inside the SIEM.
+This project is a hands-on cybersecurity lab focused on building a SIEM environment using Wazuh and the ELK stack.  
+The goal is to simulate real-world attacks (such as brute force logins, port scans, and SQL injection) and demonstrate how they can be detected and analyzed inside a SIEM.
 
-## Why I’m doing this
-Most SOC teams deal with too many alerts and miss real issues.  
-This project is my way of learning how logs, detections, and incident response reports come together in practice.  
-I’ll also try to experiment with custom rules (Sigma/YARA) and eventually add some automation or AI to make alerts easier to understand.
+Security Operation Centers often face challenges with high alert volumes and difficulty identifying real threats.  
+This project explores how logs, detection rules, and incident reports can be combined to improve visibility and response.  
+It also includes experiments with custom rules (Sigma/YARA) and the possibility of adding automation or AI to make alerts easier to interpret.
 
-## Tools I’ll be using
-- Wazuh + ELK (main SIEM stack)
-- Suricata or Zeek (for deeper network traffic logging later)
-- Hydra, Nmap, DVWA (to simulate brute force, scans, SQLi)
-- Python (to automate enrichment tasks like checking IPs against threat intel feeds)
-- Networking basics (TCP/IP, SSH logs, web attack patterns)
+## Tools and Technologies
+- Wazuh + ELK (SIEM stack)
+- Suricata or Zeek (for future network traffic analysis)
+- Hydra, Nmap, DVWA (to simulate brute force, port scans, SQLi)
+- Python (for automation and enrichment, such as checking IPs against threat intelligence feeds)
+- Networking fundamentals (TCP/IP, SSH logs, web attack patterns)
 
-## Repo Layout
-- /docs       → screenshots, notes, and final incident reports
-- /configs    → SIEM config files and detection rules
-- /scripts    → Python helpers and enrichment scripts
+## Repository Layout
+- docs/       → screenshots, notes, and incident reports
+- configs/    → SIEM config files and detection rules
+- scripts/    → Python scripts for attack simulation and detection
 
-## Disclaimer
-Everything here is done in a *controlled lab setup*.  
-Please don’t use these attack techniques against any system you don’t own or have permission to test.
+## Usage
+
+Clone the repository:
+```bash
+git clone https://github.com/sultan9723/ai-siem-network-threat-detection.git
+cd ai-siem-network-threat-detection
+1. Run Brute Force Simulator
+python scripts/bruteforce_simulator.py
+2. Generate Logs
+python scripts/log_generator.py
+3. Detect Brute Force
+python scripts/detection_engine.py 
+4. Detect Port Scans
+python scripts/portscan_detector.py
+Roadmap
+	•	Build Python scripts for attack simulation and detection
+	•	Integrate logs into Wazuh SIEM
+	•	Add Suricata for deeper packet inspection
+	•	Create and test custom detection rules (Sigma/YARA)
+	•	Experiment with AI-driven alert summarization
+	•	Finalize SIEM dashboard and reporting
+
+Disclaimer
+All activities are performed in a controlled lab environment.
+Do not use these attack techniques against any system you do not own or have explicit permission to test.
