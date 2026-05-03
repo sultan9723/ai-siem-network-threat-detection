@@ -1,7 +1,7 @@
 from collections import defaultdict
 from pathlib import Path
 
-def detect_portscan(log_file="portscan-logs.log", threshold=5):
+def detect_portscan(log_file="data/portscan-logs.log", threshold=5):
     """
     Detects port scanning activity from logs.
     Args:

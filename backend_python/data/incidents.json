@@ -1,0 +1,24 @@
+[
+  {
+    "id": "INC-001",
+    "source_ip": "192.168.1.10",
+    "risk_score": 100,
+    "status": "escalated",
+    "events": [
+      "brute_force",
+      "brute_force",
+      "port_scan"
+    ],
+    "event_count": 3,
+    "first_seen": "2026-04-25T10:00:00Z",
+    "last_seen": "2026-04-25T10:00:05Z",
+    "count": 3,
+    "created_at": "2026-04-25T10:00:00Z",
+    "analysis": {
+      "threat_type": "Brute Force Attack",
+      "severity": "High",
+      "explanation": "Multiple failed login attempts detected, indicating a brute force attack.",
+      "recommended_action": "Block the source IP and enable rate limiting."
+    }
+  }
+]
