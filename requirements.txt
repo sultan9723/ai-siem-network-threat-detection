@@ -3,3 +3,5 @@ random
 time
 pathlib
 collections
+requests
+python-dotenv

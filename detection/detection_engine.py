@@ -1,7 +1,7 @@
 from collections import Counter
 from pathlib import Path
 
-def detect_bruteforce(log_file="docs/sample-logs.log", threshold=3):
+def detect_bruteforce(log_file="data/sample-logs.log", threshold=3):
     """
     Detects brute force attempts from logs.
     Args:
