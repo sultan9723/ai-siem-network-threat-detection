@@ -4,7 +4,7 @@ import os
 import logging
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -16,7 +16,7 @@ from jose import jwt, JWTError
 # ✅ TASK 6: Load environment variables before anything else
 load_dotenv()
 
-from auth import authenticate, create_token, SECRET_KEY, ALGORITHM
+from auth import authenticate, create_token, create_refresh_token, SECRET_KEY, ALGORITHM
 from config import setup_logging
 from storage import load_incidents, save_incidents
 from reporting import generate_incident_report
@@ -42,7 +42,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        FRONTEND_URL, # e.g., https://your-siem-dashboard.vercel.app
+        FRONTEND_URL,  # e.g., https://your-siem-dashboard.vercel.app
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -77,10 +77,10 @@ class SuccessResponse(BaseModel):
     data: Any
     status: str = "success"
 
-
 class LoginRequest(BaseModel):
     username: str
     password: str
+    remember_me: bool = False
 
 
 # -------------------- ROUTES --------------------
@@ -92,12 +92,66 @@ def root():
 
 # LOGIN ROUTE
 @app.post("/login")
-def login(data: LoginRequest):
+def login(data: LoginRequest, response: Response):
+    if not data.username or not data.password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
     if authenticate(data.username, data.password):
-        token = create_token({"sub": data.username})
-        return {"access_token": token}
+        # Create short-lived access token (1 hour)
+        access_token = create_token({"sub": data.username, "type": "access"})
+
+        # Create refresh token with appropriate expiry
+        if data.remember_me:
+            # Long-lived: 30 days for "Remember Me"
+            refresh_token = create_refresh_token(data.username)
+            max_age = 30 * 24 * 60 * 60  # 30 days in seconds
+        else:
+            # Session cookie: expires when browser closes
+            refresh_token = create_token(
+                {"sub": data.username, "type": "refresh"},
+                expires_delta=None  # uses default 60 min
+            )
+            max_age = None
+
+        # Set HTTP-only cookie for refresh token
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,  # Set to True in production (HTTPS)
+            samesite="strict",
+            max_age=max_age,
+            path="/"
+        )
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
 
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+# VERIFY SESSION (check if cookie is still valid)
+@app.get("/verify-session")
+def verify_session(request: Request):
+    # Check for refresh token in cookies
+    refresh_token = request.cokies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No session")
+
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        return {"valid": True, "username": payload.get("sub")}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+
+# LOGOUT (clear cookie)
+@app.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="refresh_token", path="/")
+    return {"status": "logged out"}
 
 
 #  PROTECTED ROUTES
@@ -169,5 +223,5 @@ async def global_exception_handler(request, exc):
 # ✅ TASK 10: DEPLOYMENT READINESS (Render entry point)
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", "10000"))
+    port = int(os.getenv("PORT", "8001"))
     uvicorn.run("api:app", host="0.0.0.0", port=port, reload=False)

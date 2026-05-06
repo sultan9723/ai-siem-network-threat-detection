@@ -4,10 +4,13 @@
 .env.development.local
 .env.test.local
 .env.production.local
+*.env
 
 # Dependency directories
 node_modules/
 jspm_packages/
+backend/venv/
+backend/.venv/
 backend_python/venv/
 backend_python/.venv/
 
@@ -28,8 +31,21 @@ __pycache__/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
+backend/logs/
 backend_python/logs/
 
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# TypeScript
+tsconfig.tsbuildinfo
+
+# Test coverage
+coverage/
+.nyc_output/
