@@ -17,10 +17,54 @@ export interface Incident {
 
 // ✅ TASK 7: Strict environment-driven API URL
 // Removed hardcoded fallback for production security
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!RAW_API_URL) {
+  console.error(
+    "ERROR: NEXT_PUBLIC_API_URL is not set. " +
+    "Create .env.local with NEXT_PUBLIC_API_URL=http://127.0.0.1:8001"
+  );
+}
 
 // Ensure no trailing slash
 const API_BASE_URL = (RAW_API_URL || "").replace(/\/$/, "");
+
+/**
+ * Safely parse JSON, handling non-JSON responses (HTML error pages).
+ * Returns parsed JSON or throws a descriptive error.
+ */
+async function safeJson(res: Response): Promise<any> {
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `HTTP ${res.status}: ${res.statusText}. ` +
+      (text.length < 200 ? text : text.substring(0, 200) + "...")
+    );
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    console.error(
+      "Expected JSON but got content-type:",
+      contentType,
+      "Response:",
+      text.substring(0, 300)
+    );
+    throw new Error(
+      `Expected JSON response but got ${contentType || "unknown content type"}. ` +
+      "Check that NEXT_PUBLIC_API_URL points to the running backend API."
+    );
+  }
+
+  try {
+    return await res.json();
+  } catch (e) {
+    const text = await res.text().catch(() => "");
+    console.error("JSON parse error:", e, "Response text:", text.substring(0, 300));
+    throw new Error("Failed to parse JSON response. The API may be returning HTML (is the backend running?)");
+  }
+}
 
 /**
  * Safely retrieves auth token
@@ -63,6 +107,7 @@ async function authFetch(
     const res = await fetch(url, {
       ...options,
       headers,
+      credentials: "include", // Required for HTTP-only cookies
     });
 
     if (res.status === 401) {
@@ -96,26 +141,47 @@ export async function checkHealth(): Promise<boolean> {
  */
 export async function login(
   username: string,
-  password: string
+  password: string,
+  rememberMe: boolean = false
 ): Promise<string | null> {
   try {
+    if (!API_BASE_URL) {
+      toast.error("API URL not configured");
+      return null;
+    }
+
     const res = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, remember_me: rememberMe }),
+      credentials: "include", // Required for HTTP-only cookies
     });
 
-    const data = await res.json();
-
-    if (!res.ok || !data.access_token) {
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error("Login failed:", res.status, text.substring(0, 200));
       toast.error("Invalid credentials");
       return null;
     }
 
+    const data = await safeJson(res);
+
+    if (!data.access_token) {
+      toast.error("Invalid credentials");
+      return null;
+    }
+
+    // Store access token in localStorage for API calls
     localStorage.setItem("auth_token", data.access_token);
     toast.success("Access granted");
+
+    // If "Remember Me" is checked, the backend sets an HTTP-only cookie
+    // The browser will automatically send it with future requests
+    if (rememberMe) {
+      localStorage.setItem("remember_me", "true");
+    }
 
     return data.access_token;
   } catch (error) {
@@ -125,16 +191,70 @@ export async function login(
   }
 }
 
+
+/**
+ * Check if user has a valid session via HTTP-only cookie
+ */
+export async function checkSession(): Promise<boolean> {
+  try {
+    if (!API_BASE_URL) return false;
+
+    const res = await fetch(`${API_BASE_URL}/verify-session`, {
+      method: "GET",
+      credentials: "include", // Send cookies
+    });
+
+    if (res.ok) {
+      const data = await safeJson(res);
+      if (data.valid && data.username) {
+        // If session valid but no access token, user needs to re-login
+        if (!localStorage.getItem("auth_token")) {
+          return false;
+        }
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+
+/**
+ * Logout: clear local storage and backend cookie
+ */
+export async function logoutServer(): Promise<void> {
+  try {
+    if (API_BASE_URL) {
+      await fetch(`${API_BASE_URL}/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    }
+  } catch {
+    // Ignore errors for logout
+  } finally {
+    logout(false);
+    localStorage.removeItem("remember_me");
+  }
+}
+
 /**
  * GET ALL INCIDENTS
  */
 export async function getIncidents(): Promise<Incident[]> {
   try {
+    if (!API_BASE_URL) {
+      console.error("getIncidents: NEXT_PUBLIC_API_URL is not set");
+      return [];
+    }
+
     const res = await authFetch(`${API_BASE_URL}/incidents`, {
       cache: "no-store",
     });
 
-    const json = await res.json();
+    const json = await safeJson(res);
     const data = json?.data ?? json;
 
     return Array.isArray(data) ? data : [];
@@ -149,13 +269,15 @@ export async function getIncidents(): Promise<Incident[]> {
  */
 export async function getIncident(id: string): Promise<Incident | null> {
   try {
+    if (!API_BASE_URL) return null;
+
     const res = await authFetch(`${API_BASE_URL}/incidents/${id}`, {
       cache: "no-store",
     });
 
     if (!res.ok) return null;
 
-    const json = await res.json();
+    const json = await safeJson(res);
     return json?.data ?? json;
   } catch (error) {
     console.error("getIncident error:", error);
@@ -171,6 +293,8 @@ export async function updateIncident(
   status: string
 ): Promise<boolean> {
   try {
+    if (!API_BASE_URL) return false;
+
     const res = await authFetch(`${API_BASE_URL}/incidents/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
