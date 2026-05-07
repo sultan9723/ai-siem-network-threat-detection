@@ -62,21 +62,22 @@ def authenticate(username: str, password: str) -> bool:
     Handles empty/None inputs safely.
     """
     if not username or not password:
+        logger.debug("❌ Auth failed: empty username or password")
         return False
 
     if username != ADMIN_USERNAME:
-        logger.info("Login attempt: unknown user '%s'", username)
+        logger.debug(f"❌ Auth failed: username mismatch. Got: '{username}', Expected: '{ADMIN_USERNAME}'")
         return False
 
     try:
         result = verify_password(password, ADMIN_PASSWORD_HASH)
         if result:
-            logger.info("Login success: user '%s'", username)
+            logger.debug(f"✅ Auth success: password verified for user '{username}'")
         else:
-            logger.info("Login failed: invalid password for user '%s'", username)
+            logger.debug(f"❌ Auth failed: password verification failed for user '{username}'")
         return result
-    except Exception:
-        logger.info("Login failed: hash verification error for user '%s'", username)
+    except Exception as e:
+        logger.debug(f"❌ Auth failed: hash verification error for user '{username}': {str(e)}")
         return False
 
 
