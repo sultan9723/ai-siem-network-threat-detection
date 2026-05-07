@@ -5,4 +5,3 @@ passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
 pydantic==2.5.0
 requests==2.31.0
-cors-headers==4.3.1
