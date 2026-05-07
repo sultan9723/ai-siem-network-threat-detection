@@ -132,11 +132,22 @@ def login(data: LoginRequest, response: Response):
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
+# HEALTH CHECK ENDPOINT (for Render deployment monitoring)
+@app.get("/health")
+def health_check():
+    """Health check endpoint for deployment monitoring.
+    
+    Returns:
+        {"status": "healthy"}
+    """
+    return {"status": "healthy"}
+
+
 # VERIFY SESSION (check if cookie is still valid)
 @app.get("/verify-session")
 def verify_session(request: Request):
     # Check for refresh token in cookies
-    refresh_token = request.cokies.get("refresh_token")
+    refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No session")
 
