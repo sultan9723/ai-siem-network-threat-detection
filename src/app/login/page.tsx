@@ -4,17 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { login, checkHealth } from "@/lib/api";
 
-// Dev credentials loaded from .env.local (NEXT_PUBLIC_ prefix required for browser access)
+// Demo credentials for portfolio/recruitment UX (intentionally enabled)
+// Backend securely validates using bcrypt; plaintext passwords NOT stored on server
 const isDev = process.env.NODE_ENV === "development";
-const devUsername = process.env.NEXT_PUBLIC_DEV_USERNAME || "";
-const devPassword = process.env.NEXT_PUBLIC_DEV_PASSWORD || "";
+const devUsername = "admin";
+const devPassword = "admin123";
 
 export default function LoginPage() {
   const [operatorId, setOperatorId] = useState(
-    isDev && devUsername ? devUsername : ""
+    isDev ? devUsername : ""
   );
   const [securityKey, setSecurityKey] = useState(
-    isDev && devPassword ? devPassword : ""
+    isDev ? devPassword : ""
   );
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
@@ -58,8 +59,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 sm:p-6 pt-16 sm:pt-12 md:pt-20">
+      <div className="w-full max-w-md space-y-8 sm:space-y-8 md:space-y-10 lg:space-y-12">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 mb-6">
             <span className="text-3xl">🛡️</span>
@@ -70,28 +71,29 @@ export default function LoginPage() {
           <p className="text-slate-500 font-medium mt-2">
             Enterprise Security Identification Required
           </p>
+          {isDev && (
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                ✓ Demo Mode Active
+              </span>
+            </div>
+          )}
           {!apiReachable && (
             <p className="text-amber-500 text-xs font-bold mt-2">
               Warning: Backend API unreachable
             </p>
           )}
-          {isDev && operatorId && securityKey && (
-            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-              <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">
-                Dev Mode: Credentials Pre-filled
-              </span>
-            </div>
-          )}
+
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl">
           <form
             onSubmit={handleSubmit}
             method="POST"
             autoComplete="on"
             className="space-y-6"
           >
-            <div>
+            <div className="mb-4">
               <label
                 htmlFor="username"
                 className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2"
@@ -111,7 +113,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
+            <div className="mb-6">
               <label
                 htmlFor="password"
                 className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2"
@@ -131,7 +133,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -155,6 +157,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-sm"
+              style={{ minHeight: 48 }}
             >
               {loading ? "Verifying..." : "Initialize Session"}
             </button>
