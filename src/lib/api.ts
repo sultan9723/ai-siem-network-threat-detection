@@ -150,18 +150,37 @@ export async function login(
       return null;
     }
 
+    const requestBody = { username, password, remember_me: rememberMe };
+    
+    // Debug: log request details
+    console.log("🔐 Login request:", {
+      url: `${API_BASE_URL}/login`,
+      contentType: "application/json",
+      bodyKeys: Object.keys(requestBody),
+    });
+
     const res = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password, remember_me: rememberMe }),
+      body: JSON.stringify(requestBody),
       credentials: "include", // Required for HTTP-only cookies
+    });
+
+    // Debug: log response details
+    console.log("🔐 Login response:", {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
     });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      console.error("Login failed:", res.status, text.substring(0, 200));
+      console.error("❌ Login failed:", {
+        status: res.status,
+        response: text.substring(0, 200),
+      });
       toast.error("Invalid credentials");
       return null;
     }
@@ -169,12 +188,14 @@ export async function login(
     const data = await safeJson(res);
 
     if (!data.access_token) {
+      console.error("❌ No access token in response:", data);
       toast.error("Invalid credentials");
       return null;
     }
 
     // Store access token in localStorage for API calls
     localStorage.setItem("auth_token", data.access_token);
+    console.log("✅ Login successful, token stored");
     toast.success("Access granted");
 
     // If "Remember Me" is checked, the backend sets an HTTP-only cookie
