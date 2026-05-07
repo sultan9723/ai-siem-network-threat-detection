@@ -11,12 +11,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+# ✅ Load .env from backend_python directory BEFORE any other imports
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_backend_dir, ".env"))
+
 from jose import jwt, JWTError
 
-# ✅ TASK 6: Load environment variables before anything else
-load_dotenv()
-
-from auth import authenticate, create_token, create_refresh_token, SECRET_KEY, ALGORITHM
+from auth import authenticate, create_token, SECRET_KEY, ALGORITHM, ADMIN_USERNAME, ADMIN_PASSWORD_HASH
 from config import setup_logging
 from storage import load_incidents, save_incidents
 from reporting import generate_incident_report
@@ -92,43 +93,32 @@ def root():
 
 # LOGIN ROUTE
 @app.post("/login")
-def login(data: LoginRequest, response: Response):
+def login(data: LoginRequest):
+    """Authenticate user and return JWT access token.
+
+    Expects JSON body:
+        {"username": "admin", "password": "admin123"}
+
+    Returns:
+        {"access_token": "<jwt>", "token_type": "bearer"}
+    """
+    # Safe debug logging (no passwords)
+    logger.info(f"Login attempt: username='{data.username}'")
+
     if not data.username or not data.password:
+        logger.warning("Login failed: missing username or password")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Verify environment variables loaded
+    logger.info(f"Env ADMIN_USERNAME loaded: {bool(ADMIN_USERNAME)}")
+    logger.info(f"Env ADMIN_PASSWORD_HASH loaded: {bool(ADMIN_PASSWORD_HASH)}")
+
     if authenticate(data.username, data.password):
-        # Create short-lived access token (1 hour)
-        access_token = create_token({"sub": data.username, "type": "access"})
+        token = create_token({"sub": data.username, "type": "access"})
+        logger.info(f"Login success: user '{data.username}'")
+        return {"access_token": token, "token_type": "bearer"}
 
-        # Create refresh token with appropriate expiry
-        if data.remember_me:
-            # Long-lived: 30 days for "Remember Me"
-            refresh_token = create_refresh_token(data.username)
-            max_age = 30 * 24 * 60 * 60  # 30 days in seconds
-        else:
-            # Session cookie: expires when browser closes
-            refresh_token = create_token(
-                {"sub": data.username, "type": "refresh"},
-                expires_delta=None  # uses default 60 min
-            )
-            max_age = None
-
-        # Set HTTP-only cookie for refresh token
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,  # Set to True in production (HTTPS)
-            samesite="strict",
-            max_age=max_age,
-            path="/"
-        )
-
-        return {
-            "access_token": access_token,
-            "token_type": "bearer"
-        }
-
+    logger.warning(f"Login failed: invalid credentials for user '{data.username}'")
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
